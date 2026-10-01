@@ -1,21 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-import argparse  # NEU: Für die Steuerung über die Kommandozeile
 
-# =============================================================================
-# --- 0. ARGUMENT PARSER (SZENE-STEUERUNG) ---
-# =============================================================================
-parser = argparse.ArgumentParser(description='Q-Learning Kollusionssimulation - Szenariensteuerung.')
-parser.add_argument('--szenario', type=str, choices=['I', 'II', 'III', 'IV'], default='I',
-                    help='Wähle das Epsilon-Szenario (I, II, III oder IV)')
-args = parser.parse_args()
 
-print(f"\n[INFO] Simulation gestartet für SZENARIO {args.szenario}")
-
-# =============================================================================
 # --- 1. PARAMETER, SEEDS & SYSTEM-INITIALISIERUNG ---
-# =============================================================================
+
 delta = 0.98
 max_episodes = 2000000
 CONVERGENCE_THRESHOLD = 100000  # Runden exakt gleicher Preise für stabile Konvergenz
@@ -50,9 +39,9 @@ eval_profits_p1_matrix = np.zeros((n_runs, 100))
 eval_profits_p2_matrix = np.zeros((n_runs, 100))
 
 
-# =============================================================================
+
 # --- 2. LOGIT-PROFIT-FUNKTION (MARKTMODELL NACH CALVANO) ---
-# =============================================================================
+
 def get_profits(p1_idx, p2_idx):
     p1, p2 = prices[p1_idx], prices[p2_idx]
     mu = 0.25
@@ -72,9 +61,9 @@ def get_profits(p1_idx, p2_idx):
     return profit1, profit2
 
 
-# =============================================================================
+
 # --- 3. BERECHNUNG DER ÖKONOMISCHEN BENCHMARKS (SPIELTHEORIE) ---
-# =============================================================================
+
 nash_price, nash_profit = None, -1
 collusive_price, max_joint_profit = None, -1
 
@@ -99,9 +88,9 @@ for idx1 in range(n_prices):
 # Monopol-Profit pro Spieler (für den Index benötigt)
 monopoly_profit_per_player = max_joint_profit / 2
 
-# =============================================================================
+
 # --- 4. MULTI-RUN SIMULATION (TRAINING & EVALUATION GETRENNT) ---
-# =============================================================================
+
 print(f"Starte {n_runs} Simulationsdurchläufe mit globaler Lernrate & Konvergenzprüfung...\n")
 
 for run_idx, seed in enumerate(seeds):
@@ -124,21 +113,12 @@ for run_idx, seed in enumerate(seeds):
     epsilon_run_history = []
     alpha_run_history = []
 
-    # -------------------------------------------------------------------------
+
     # PHASE A: TRAINING (Mit Exploration & Q-Updates)
-    # -------------------------------------------------------------------------
+
     for t_idx in range(max_episodes):
         t = t_idx + 1
-
-        # NEU: Dynamische Epsilon-Zuweisung je nach gewähltem Szenario via CLI
-        if args.szenario == 'I':
-            current_epsilon = 1.0 / t
-        elif args.szenario == 'II':
-            current_epsilon = 1000 / (1000 + t)
-        elif args.szenario == 'III':
-            current_epsilon = 10000 / (10000 + t)
-        elif args.szenario == 'IV':
-            current_epsilon = 50000 / (50000 + t)
+        current_epsilon = 50000 / (50000 + t)
 
         if random.uniform(0, 1) < current_epsilon:
             a1, a2 = random.randint(0, n_prices - 1), random.randint(0, n_prices - 1)
@@ -188,9 +168,9 @@ for run_idx, seed in enumerate(seeds):
     global_epsilon_history.append(epsilon_run_history)
     global_alpha_history.append(alpha_run_history)
 
-    # -------------------------------------------------------------------------
+
     # PHASE B: EVALUATION (Einfrieren der Q-Table, Epsilon = 0, Reine Greedy-Policy)
-    # -------------------------------------------------------------------------
+
     eval_p1, eval_p2 = [], []
     eval_r1, eval_r2 = [], []
     eval_s1, eval_s2 = s1, s2
@@ -232,9 +212,9 @@ for run_idx, seed in enumerate(seeds):
         print(f" -> Run {run_idx + 1}/{n_runs} (Seed {seed}): Maximum erreicht. "
               f"Ø-Preis: {run_avg_p:.4f} €, Kollusionsindex: {run_coll_index:.2%}")
 
-# =============================================================================
+
 # --- 5. ERWEITERTE STATISTISCHE KENNZAHLEN-AUSGABE ---
-# =============================================================================
+
 pooled_prices = all_final_prices_p1 + all_final_prices_p2
 pooled_profits = all_final_profits_p1 + all_final_profits_p2
 
@@ -248,7 +228,7 @@ global_collusion_index = (mean_profit - nash_profit) / (monopoly_profit_per_play
 
 print("\n" + "=" * 85)
 print(
-    f"{f'Metrik (Aggregiert über alle 100 Seeds - Szenario {args.szenario})':<40} | {'Nash (Wettbewerb)':<17} | {'KI-Simulation':<17} | {'Monopol (Kollusion)'}")
+    f"{'Metrik (Aggregiert über alle 100 Seeds)':<40} | {'Nash (Wettbewerb)':<17} | {'KI-Simulation':<17} | {'Monopol (Kollusion)'}")
 print("-" * 85)
 print(f"{'Durchschnitts-Preis (Mean)':<40} | {nash_price:<17.4f} | {mean_price:<17.4f} | {collusive_price:.4f}")
 print(f"{'Preis-Standardabweichung (SD)':<40} | {'0.0000':<17} | {sd_price:<17.4f} | {'0.0000'}")
@@ -261,9 +241,9 @@ print(f"{'Ø Konvergenz-Runde (Episoden)':<40} | {'-':<17} | {int(np.mean(histor
 print(f"{'Kollusionsindex (Profit Gain Delta)':<40} | {'0.00%':<17} | {global_collusion_index:<17.2%} | {'100.00%'}")
 print("=" * 85)
 
-# =============================================================================
+
 # --- 6. VISUALISIERUNG (4 SEPARATE GRAPHIKEN) ---
-# =============================================================================
+
 x_eval_steps = np.arange(1, 101)
 
 # --- GRAFIK 1: DURCHSCHNITTSPREISE (Aggregiert über alle Seeds) ---
@@ -277,8 +257,7 @@ plt.plot(x_eval_steps, mean_eval_p2, label='Algorithmus 2', color='orange', line
 plt.axhline(y=collusive_price, color='red', linestyle='--', linewidth=1.5, label='Monopolpreis')
 plt.axhline(y=nash_price, color='black', linestyle=':', linewidth=1.5, label='Kompetitiver Benchmark')
 
-plt.title(f"Durchschnittspreise in der Evaluationsphase (ε = 0) - Szenario {args.szenario}", fontsize=12,
-          fontweight='bold')
+plt.title("Durchschnittspreise in der Evaluationsphase (ε = 0)", fontsize=12, fontweight='bold')
 plt.xlabel("Evaluationsrunden (Testphase)", fontsize=10)
 plt.ylabel("Preise", fontsize=10)
 plt.ylim(1.35, 2.05)
@@ -292,13 +271,11 @@ mean_eval_r1 = np.mean(eval_profits_p1_matrix, axis=0)
 mean_eval_r2 = np.mean(eval_profits_p2_matrix, axis=0)
 mean_joint_eval_profit = (mean_eval_r1 + mean_eval_r2) / 2
 
-plt.plot(x_eval_steps, mean_joint_eval_profit, label='Durchschnittsprofite in der Evaluationsphase (ε = 0)',
-         color='green', linewidth=2)
+plt.plot(x_eval_steps, mean_joint_eval_profit, label='Durchschnittsprofite in der Evaluationsphase (ε = 0)', color='green', linewidth=2)
 plt.axhline(y=monopoly_profit_per_player, color='red', linestyle='--', linewidth=1.5, label='Monopol-Profit')
 plt.axhline(y=nash_profit, color='black', linestyle=':', linewidth=1.5, label='Benchmark-Profit')
 
-plt.title(f"Durchschnittlicher Profit in der Evaluationsphase (ε = 0) - Szenario {args.szenario}", fontsize=12,
-          fontweight='bold')
+plt.title("Durchschnittlicher Profit in der Evaluationsphase (ε = 0)", fontsize=12, fontweight='bold')
 plt.xlabel("Evaluationsrunden (Testphase)", fontsize=10)
 plt.ylabel("Profite", fontsize=10)
 plt.ylim(nash_profit - 0.02, monopoly_profit_per_player + 0.02)
@@ -308,15 +285,17 @@ plt.tight_layout()
 
 # --- Berechnen der X-Achsen-Skalierung für die Verläufe ---
 longest_run_idx = np.argmax(history_convergence_episodes)
+# Sicherer Zuschnitt auf die minimale Länge aller aufgezeichneten Runs, um Inhomogenitäten abzufangen
 min_tracked_points = min(len(run) for run in global_alpha_history)
 x_ticks_eps = np.linspace(0, min_tracked_points - 1, 5, dtype=int)
 x_labels_eps = [f"{int((pos * 2000) / 1000)}k" for pos in x_ticks_eps]
 
 # --- GRAFIK 3: EPSILON-VERLAUF (Globale Exploration) ---
 plt.figure(figsize=(8, 5))
+# Kürzen des Epsilon-Verlaufs für eine homogene Darstellung im Plot
 truncated_epsilon_history = global_epsilon_history[longest_run_idx][:min_tracked_points]
 plt.plot(truncated_epsilon_history, color='purple', linewidth=2.5, label='Reduktion der Explorationsrate (ε)')
-plt.title(f"Epsilon-Verlauf über die Trainingszeit - Szenario {args.szenario}", fontsize=12, fontweight='bold')
+plt.title("Epsilon-Verlauf über die Trainingszeit", fontsize=12, fontweight='bold')
 plt.xlabel("Episoden (Trainingsphase)", fontsize=10)
 plt.ylabel("Explorationsrate (ε)", fontsize=10)
 plt.xticks(ticks=x_ticks_eps, labels=x_labels_eps)
@@ -326,12 +305,12 @@ plt.tight_layout()
 
 # --- GRAFIK 4: ALPHA-VERLAUF (Gesamte Matrix) ---
 plt.figure(figsize=(8, 5))
+# Jede Historie wird auf die minimale gemeinsame Länge gekürzt, damit np.mean() fehlerfrei funktioniert
 homogeneous_alpha_history = [run[:min_tracked_points] for run in global_alpha_history]
 mean_alpha_trajectory = np.mean(homogeneous_alpha_history, axis=0)
 
 plt.plot(mean_alpha_trajectory, color='darkred', linewidth=2.5, label='Ø Lernrate (α)')
-plt.title(f"Durchschnittlicher Alpha-Verlauf über die Gesamtmatrix - Szenario {args.szenario}", fontsize=12,
-          fontweight='bold')
+plt.title("Durchschnittlicher Alpha-Verlauf über die Gesamtmatrix", fontsize=12, fontweight='bold')
 plt.xlabel("Episoden (Trainingsphase)", fontsize=10)
 plt.ylabel("Lernrate (α)", fontsize=10)
 plt.xticks(ticks=x_ticks_eps, labels=x_labels_eps)
